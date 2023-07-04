@@ -1,6 +1,7 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
+    id 'com.google.secrets_gradle_plugin' version '0.4'
 }
 
 android {
@@ -64,4 +65,6 @@ dependencies {
     androidTestImplementation 'androidx.compose.ui:ui-test-junit4'
     debugImplementation 'androidx.compose.ui:ui-tooling'
     debugImplementation 'androidx.compose.ui:ui-test-manifest'
+    implementation 'com.squareup.okhttp3:okhttp:4.9.1'
+    implementation 'com.google.code.gson:gson:2.8.8'
 }
