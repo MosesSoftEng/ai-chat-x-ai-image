@@ -1,7 +1,7 @@
 package ai.chat.x.ai.images.data.repository
 
+import ai.chat.x.ai.images.data.model.ChatItem
 import ai.chat.x.ai.images.data.model.Message
-import ai.chat.x.ai.images.utils.CustomLogger
 import com.google.gson.Gson
 import okhttp3.Call
 import okhttp3.Callback
@@ -15,13 +15,11 @@ import java.io.IOException
 
 val url = "https://api.openai.com/v1/chat/completions"
 
-fun getAITextResponse(chatGptApiKey: String, chatList: MutableList<Message>) {
+fun getAITextResponse(chatGptApiKey: String, chatItemList: MutableList<ChatItem>) {
     val client = OkHttpClient()
 
     val gson = Gson()
-    val chatListJson = gson.toJson(chatList)
-
-    CustomLogger.i(chatListJson)
+    val chatListJson = gson.toJson(chatItemList)
 
     val json = """
         {
@@ -47,8 +45,6 @@ fun getAITextResponse(chatGptApiKey: String, chatList: MutableList<Message>) {
         override fun onResponse(call: Call, response: Response) {
             val responseBody = response.body?.string()
 
-            CustomLogger.i(responseBody.toString())
-
             if (response.isSuccessful) {
                 // Process the response here
                 // responseBody contains the response from the API
@@ -61,7 +57,7 @@ fun getAITextResponse(chatGptApiKey: String, chatList: MutableList<Message>) {
                     val messageJsonString = firstChoice.getString("message").trim()
 
                     val newMessage = gson.fromJson(messageJsonString, Message::class.java)
-                    chatList.add(newMessage)
+                    chatItemList.add(newMessage)
                 }
             } else {
                 // Handle API call failure

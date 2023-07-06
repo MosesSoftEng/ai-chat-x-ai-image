@@ -1,8 +1,10 @@
 package ai.chat.x.ai.images.presentation.components
 
 import ai.chat.x.ai.images.R
+import ai.chat.x.ai.images.data.model.ChatItem
 import ai.chat.x.ai.images.data.model.Message
 import ai.chat.x.ai.images.data.repository.getAITextResponse
+import ai.chat.x.ai.images.domain.AIImageHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -35,7 +37,7 @@ import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
-fun ChatBox(chatGptApiKey: String, chatList: MutableList<Message>) {
+fun ChatBox(chatGptApiKey: String, chatItemList: MutableList<ChatItem>) {
     var userRequestText by remember { mutableStateOf(TextFieldValue("")) }
     var isTextMode by remember { mutableStateOf(true) }
 
@@ -80,7 +82,7 @@ fun ChatBox(chatGptApiKey: String, chatList: MutableList<Message>) {
 
             IconButton(
                 onClick = {
-                    handleSendClick(chatGptApiKey, chatList, userRequestText, isTextMode, softwareKeyboardController)
+                    handleSendClick(chatGptApiKey, chatItemList, userRequestText, isTextMode, softwareKeyboardController)
                     userRequestText = TextFieldValue("")
                 },
                 enabled = userRequestText.text.isNotEmpty(),
@@ -98,7 +100,7 @@ fun ChatBox(chatGptApiKey: String, chatList: MutableList<Message>) {
 @OptIn(ExperimentalComposeUiApi::class)
 private fun handleSendClick(
     chatGptApiKey: String,
-    chatList: MutableList<Message>,
+    chatItemList: MutableList<ChatItem>,
     userRequestText: TextFieldValue,
     isTextMode: Boolean,
     softwareKeyboardController: SoftwareKeyboardController?
@@ -106,11 +108,11 @@ private fun handleSendClick(
     softwareKeyboardController?.hide()
 
     val newMessage = Message(role = "user", content = userRequestText.text)
-    chatList.add(newMessage)
+    chatItemList.add(newMessage)
 
     if (isTextMode) {
-        getAITextResponse(chatGptApiKey, chatList)
+        getAITextResponse(chatGptApiKey, chatItemList)
     } else {
-        getAIImageResponse(chatGptApiKey, chatList)
+        AIImageHandler.getAIImage(chatItemList)
     }
 }

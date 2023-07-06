@@ -1,10 +1,7 @@
 package ai.chat.x.ai.images.presentation.components
 
-import ai.chat.x.ai.images.data.model.Message
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
+import ai.chat.x.ai.images.data.model.ChatItem
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
@@ -62,7 +59,7 @@ fun AssistantChatCard(content: String) {
 }
 
 @Composable
-fun ChatListItem(message: Message) {
+fun ChatListItem(message: ChatItem) {
     when (message.role) {
         "user" -> {
             UserChatCard(message.content)
