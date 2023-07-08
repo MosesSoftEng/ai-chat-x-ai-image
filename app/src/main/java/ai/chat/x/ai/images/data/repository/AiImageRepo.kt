@@ -11,6 +11,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
 
+// TODO: Rename to AiImageAPI
 object AiImageRepo {
     fun makeAiImageRequest(
         apiKey: String,
