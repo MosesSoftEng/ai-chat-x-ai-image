@@ -59,6 +59,7 @@ fun getAiText(
                     onSuccess(messageJsonString)
                 }
             } else {
+                // TODO: Handle error
                 error("Failed to get ai text response")
             }
         }
