@@ -3,7 +3,6 @@ package ai.chat.x.ai.images.presentation.main
 import ai.chat.x.ai.images.common.PermissionManager
 import ai.chat.x.ai.images.config.KEYS
 import ai.chat.x.ai.images.data.model.ChatItem
-import ai.chat.x.ai.images.presentation.components.CenteredCircularProgressIndicator
 import ai.chat.x.ai.images.presentation.components.ChatBox
 import ai.chat.x.ai.images.presentation.components.ChatListItem
 import ai.chat.x.ai.images.ui.theme.AIChatXAIImagesTheme
@@ -19,10 +18,12 @@ import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -32,6 +33,7 @@ import androidx.core.app.ActivityCompat
 
 class MainActivity : ComponentActivity() {
     private var chatGptApiKey: String = ""
+    private val mainActivityViewModel: MainActivityViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,22 +47,33 @@ class MainActivity : ComponentActivity() {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q)
                 storagePermission()
 
-            // TODO: Delete this line.
+            // TODO: Replace all chatGptApiKey with KEYS.OPENAI_API
             chatGptApiKey = value.toString()
             KEYS.OPENAI_API = value.toString()
 
             val chatItemList = remember { mutableStateListOf<ChatItem>() }
             var chatBoxTextFieldValue = remember { mutableStateOf(TextFieldValue("")) }
+            val replyChatItemMutableState: MutableState<ChatItem?> = remember { mutableStateOf(null) }
 
             AIChatXAIImagesTheme {
                 Column(modifier = Modifier.fillMaxSize()) {
                     LazyColumn(modifier = Modifier.weight(1f)) {
                         items(chatItemList) { item ->
-                            ChatListItem(item, chatBoxTextFieldValue)
+                            ChatListItem(
+                                item,
+                                chatBoxTextFieldValue,
+                                replyChatItemMutableState
+                            )
                         }
                     }
 
-                    ChatBox(applicationContext, chatGptApiKey, chatItemList = chatItemList, chatBoxTextFieldValue)
+                    ChatBox(
+                        applicationContext,
+                        chatGptApiKey,
+                        chatItemList = chatItemList,
+                        chatBoxTextFieldValue,
+                        replyChatItemMutableState
+                    )
                 }
             }
         }
