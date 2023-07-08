@@ -2,9 +2,14 @@ package ai.chat.x.ai.images.presentation.components
 
 import ai.chat.x.ai.images.R
 import ai.chat.x.ai.images.data.model.ChatItem
-import ai.chat.x.ai.images.data.model.Message
-import ai.chat.x.ai.images.data.repository.getAITextResponse
-import ai.chat.x.ai.images.domain.AIImageHandler
+import ai.chat.x.ai.images.data.model.ImageChatItem
+import ai.chat.x.ai.images.data.model.LoaderChatItem
+import ai.chat.x.ai.images.data.model.MessageChatItem
+import ai.chat.x.ai.images.data.repository.getAiText
+import ai.chat.x.ai.images.domain.AiImageHandler
+import ai.chat.x.ai.images.domain.ChatListHandler
+import ai.chat.x.ai.images.utils.Logger
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -19,6 +24,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,17 +40,23 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import com.google.gson.Gson
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
-fun ChatBox(chatGptApiKey: String, chatItemList: MutableList<ChatItem>) {
-    var userRequestText by remember { mutableStateOf(TextFieldValue("")) }
+fun ChatBox(
+    applicationContext: Context,
+    chatGptApiKey: String,
+    chatItemList: MutableList<ChatItem>,
+    chatBoxTextFieldValue: MutableState<TextFieldValue>,
+) {
     var isTextMode by remember { mutableStateOf(true) }
 
     val softwareKeyboardController = LocalSoftwareKeyboardController.current
 
     Box(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
             .background(Color.LightGray)
     ) {
         Row(
@@ -63,29 +75,29 @@ fun ChatBox(chatGptApiKey: String, chatItemList: MutableList<ChatItem>) {
             ) {
                 Icon(
                     painter = painterResource(if (isTextMode) R.drawable.message_square_svgrepo_com else R.drawable.image_1_svgrepo_com),
-                    contentDescription = if (isTextMode) "Text Mode" else "Image Mode"
+                    contentDescription = if (isTextMode) "Text Mode" else "ImageChatItem Mode"
                 )
             }
 
             TextField(
-                value = userRequestText,
+                value = chatBoxTextFieldValue.value,
                 onValueChange = { newText ->
-                    userRequestText = newText
+                    chatBoxTextFieldValue.value = newText
+                    Logger.d("TextField value changed")
                 },
                 modifier = Modifier
                     .weight(1f)
-
                     .wrapContentHeight(),
                 keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Text),
-                visualTransformation = VisualTransformation.None
+                visualTransformation = VisualTransformation.None,
             )
 
             IconButton(
                 onClick = {
-                    handleSendClick(chatGptApiKey, chatItemList, userRequestText, isTextMode, softwareKeyboardController)
-                    userRequestText = TextFieldValue("")
+                    handleSendClick(applicationContext, chatGptApiKey, chatItemList, chatBoxTextFieldValue.value.text, isTextMode, softwareKeyboardController)
+                    chatBoxTextFieldValue.value = TextFieldValue("")
                 },
-                enabled = userRequestText.text.isNotEmpty(),
+                enabled = chatBoxTextFieldValue.value.text.isNotEmpty(),
                 modifier = Modifier.size(48.dp),
             ) {
                 Icon(
@@ -99,20 +111,51 @@ fun ChatBox(chatGptApiKey: String, chatItemList: MutableList<ChatItem>) {
 
 @OptIn(ExperimentalComposeUiApi::class)
 private fun handleSendClick(
+    applicationContext: Context,
     chatGptApiKey: String,
     chatItemList: MutableList<ChatItem>,
-    userRequestText: TextFieldValue,
+    userRequestText: String,
     isTextMode: Boolean,
     softwareKeyboardController: SoftwareKeyboardController?
 ) {
     softwareKeyboardController?.hide()
 
-    val newMessage = Message(role = "user", content = userRequestText.text)
-    chatItemList.add(newMessage)
-
     if (isTextMode) {
-        getAITextResponse(chatGptApiKey, chatItemList)
+        chatItemList.add(MessageChatItem(role = "user", content = userRequestText))
+
+        // TODO: Create text handler.
+        getAiText(
+            chatGptApiKey,
+            ChatListHandler.getChatItemListJsonString(chatItemList),
+            onSuccess = { messageJsonString ->
+                chatItemList.removeLast()
+                chatItemList.add(Gson().fromJson(messageJsonString, MessageChatItem::class.java))
+            },
+            onError = { errorMessage ->
+                // TODO: Handle request error, retry snackbar?
+                chatItemList.removeLast()
+            }
+        )
+
+        // Add loader
+        chatItemList.add(LoaderChatItem(role = "loader", content = ""));
     } else {
-        AIImageHandler.getAIImage(chatItemList)
+        chatItemList.add(ImageChatItem(role = "user", content = userRequestText, imagePath = ""))
+
+        AiImageHandler.getAIImage(
+            applicationContext,
+            chatItemList,
+            onSuccess  = { imagePath ->
+                chatItemList.removeLast()
+                chatItemList.add(ImageChatItem(role = "assistant", content = userRequestText, imagePath = imagePath))
+            },
+            onError = { errorMessage ->
+                // TODO: Handle request error, retry snackbar?
+                chatItemList.removeLast()
+            }
+        )
+
+        // Add loader
+        chatItemList.add(LoaderChatItem(role = "loader", content = ""));
     }
 }
