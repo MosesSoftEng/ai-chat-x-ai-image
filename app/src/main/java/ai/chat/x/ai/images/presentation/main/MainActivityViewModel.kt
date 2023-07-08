@@ -12,6 +12,6 @@ import androidx.lifecycle.ViewModel
  * This ViewModel plays a crucial role in maintaining the state and coordinating the flow of data in the main screen.
  */
 class MainActivityViewModel: ViewModel() {
-    val chatItemLiveData = MutableLiveData<ChatItem>()
+    val replyChatItemLiveData = MutableLiveData<ChatItem>()
 
 }
