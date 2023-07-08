@@ -20,7 +20,6 @@ An android application that provides generative ai chat and image completion.
 - [ ] Ask Ai or get image.
 - [ ] MarkDown TextField.
 - [ ] Options for prompts.
-- 
 
 # Resources references.
 
