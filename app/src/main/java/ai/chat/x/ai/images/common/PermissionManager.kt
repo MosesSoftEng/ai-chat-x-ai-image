@@ -9,6 +9,7 @@ import androidx.core.content.ContextCompat
 
 object PermissionManager {
     private val storagePermission = Manifest.permission.WRITE_EXTERNAL_STORAGE
+    val STORAGE_PERMISSION_REQUEST_CODE: Int  = 1001
 
     fun isStoragePermissionGranted(context: Context): Boolean {
         val permissionStatus = ContextCompat.checkSelfPermission(
