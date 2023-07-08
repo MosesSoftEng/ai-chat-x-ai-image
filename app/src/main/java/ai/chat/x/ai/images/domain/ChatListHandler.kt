@@ -13,6 +13,13 @@ object ChatListHandler {
         return Gson().toJson(chatItemList)
     }
 
+    fun hideLoader(chatItemList: MutableList<ChatItem>) {
+        val lastItem = chatItemList.lastOrNull()
+        if (lastItem is LoaderChatItem) {
+            chatItemList.removeLast()
+        }
+    }
+
     fun showLoader(chatItemList: MutableList<ChatItem>) {
         chatItemList.add(LoaderChatItem(role = "loader", content = ""));
     }
