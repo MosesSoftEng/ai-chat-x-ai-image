@@ -3,7 +3,6 @@ package ai.chat.x.ai.images.presentation.components
 import ai.chat.x.ai.images.R
 import ai.chat.x.ai.images.data.model.ChatItem
 import ai.chat.x.ai.images.data.model.ImageChatItem
-import ai.chat.x.ai.images.data.model.LoaderChatItem
 import ai.chat.x.ai.images.data.model.MessageChatItem
 import ai.chat.x.ai.images.data.repository.getAiText
 import ai.chat.x.ai.images.domain.AiImageHandler
@@ -12,8 +11,10 @@ import ai.chat.x.ai.images.utils.Logger
 import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
@@ -34,7 +35,6 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
@@ -49,9 +49,10 @@ fun ChatBox(
     chatGptApiKey: String,
     chatItemList: MutableList<ChatItem>,
     chatBoxTextFieldValue: MutableState<TextFieldValue>,
+    replyChatItemMutableState: MutableState<ChatItem?>,
 ) {
+    var isGettingAiResponse by remember { mutableStateOf(false) }
     var isTextMode by remember { mutableStateOf(true) }
-
     val softwareKeyboardController = LocalSoftwareKeyboardController.current
 
     Box(
@@ -79,25 +80,49 @@ fun ChatBox(
                 )
             }
 
-            TextField(
-                value = chatBoxTextFieldValue.value,
-                onValueChange = { newText ->
-                    chatBoxTextFieldValue.value = newText
-                    Logger.d("TextField value changed")
-                },
+            Column(
                 modifier = Modifier
                     .weight(1f)
                     .wrapContentHeight(),
-                keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Text),
-                visualTransformation = VisualTransformation.None,
-            )
+            ) {
+                if (replyChatItemMutableState.value != null) {
+                    UserMessageChatItemReplyView(replyChatItemMutableState)
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
+                TextField(
+                    value = chatBoxTextFieldValue.value,
+                    onValueChange = { newText ->
+                        chatBoxTextFieldValue.value = newText
+                        Logger.d("TextField value changed")
+                    },
+                    keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Text),
+                    visualTransformation = VisualTransformation.None,
+                )
+            }
 
             IconButton(
                 onClick = {
-                    handleSendClick(applicationContext, chatGptApiKey, chatItemList, chatBoxTextFieldValue.value.text, isTextMode, softwareKeyboardController)
+                    softwareKeyboardController?.hide()
+                    isGettingAiResponse = true
+
+                    handleSendClick(
+                        applicationContext,
+                        chatGptApiKey,
+                        chatItemList,
+                        chatBoxTextFieldValue.value.text,
+                        isTextMode,
+                        replyChatItemMutableState
+                    ) {
+                        isGettingAiResponse = false
+                        ChatListHandler.hideLoader(chatItemList)
+                    }
+
+                    ChatListHandler.showLoader(chatItemList)
                     chatBoxTextFieldValue.value = TextFieldValue("")
+                    replyChatItemMutableState.value = null
                 },
-                enabled = chatBoxTextFieldValue.value.text.isNotEmpty(),
+                enabled = chatBoxTextFieldValue.value.text.isNotEmpty() && !isGettingAiResponse,
                 modifier = Modifier.size(48.dp),
             ) {
                 Icon(
@@ -116,29 +141,26 @@ private fun handleSendClick(
     chatItemList: MutableList<ChatItem>,
     userRequestText: String,
     isTextMode: Boolean,
-    softwareKeyboardController: SoftwareKeyboardController?
+    replyChatItemMutableState: MutableState<ChatItem?>,
+    onFinish: () -> Unit
 ) {
-    softwareKeyboardController?.hide()
-
     if (isTextMode) {
-        chatItemList.add(MessageChatItem(role = "user", content = userRequestText))
+        // Handle reply
+        chatItemList.add(MessageChatItem(role = "user", content = appendReplyContent(userRequestText, replyChatItemMutableState)))
 
         // TODO: Create text handler.
         getAiText(
             chatGptApiKey,
             ChatListHandler.getChatItemListJsonString(chatItemList),
             onSuccess = { messageJsonString ->
-                chatItemList.removeLast()
+                onFinish()
                 chatItemList.add(Gson().fromJson(messageJsonString, MessageChatItem::class.java))
             },
             onError = { errorMessage ->
                 // TODO: Handle request error, retry snackbar?
-                chatItemList.removeLast()
+                onFinish()
             }
         )
-
-        // Add loader
-        chatItemList.add(LoaderChatItem(role = "loader", content = ""));
     } else {
         chatItemList.add(ImageChatItem(role = "user", content = userRequestText, imagePath = ""))
 
@@ -146,16 +168,23 @@ private fun handleSendClick(
             applicationContext,
             chatItemList,
             onSuccess  = { imagePath ->
-                chatItemList.removeLast()
+                onFinish()
                 chatItemList.add(ImageChatItem(role = "assistant", content = userRequestText, imagePath = imagePath))
             },
             onError = { errorMessage ->
                 // TODO: Handle request error, retry snackbar?
-                chatItemList.removeLast()
+                onFinish()
             }
         )
-
-        // Add loader
-        chatItemList.add(LoaderChatItem(role = "loader", content = ""));
     }
 }
+
+fun appendReplyContent(userRequestText: String, replyChatItem: MutableState<ChatItem?>): String {
+    return if (replyChatItem.value != null) {
+        "$userRequestText:\n\n${replyChatItem.value!!.content}"
+    } else {
+        userRequestText
+    }
+}
+
+
