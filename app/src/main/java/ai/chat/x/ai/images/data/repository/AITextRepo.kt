@@ -1,7 +1,5 @@
 package ai.chat.x.ai.images.data.repository
 
-import ai.chat.x.ai.images.data.model.ChatItem
-import ai.chat.x.ai.images.data.model.Message
 import com.google.gson.Gson
 import okhttp3.Call
 import okhttp3.Callback
@@ -15,11 +13,17 @@ import java.io.IOException
 
 val url = "https://api.openai.com/v1/chat/completions"
 
-fun getAITextResponse(chatGptApiKey: String, chatItemList: MutableList<ChatItem>) {
+
+// TODO: Rename to getAiTextResponse
+fun getAiText(
+    chatGptApiKey: String,
+    chatListJson: String,
+    onSuccess: (String) -> Unit,
+    onError: (String) -> Unit
+) {
     val client = OkHttpClient()
 
     val gson = Gson()
-    val chatListJson = gson.toJson(chatItemList)
 
     val json = """
         {
@@ -38,30 +42,24 @@ fun getAITextResponse(chatGptApiKey: String, chatItemList: MutableList<ChatItem>
 
     client.newCall(request).enqueue(object : Callback {
         override fun onFailure(call: Call, e: IOException) {
-            // Handle API call failure
-            println(e.message)
+            e.message?.let { onError(it) }
         }
 
         override fun onResponse(call: Call, response: Response) {
             val responseBody = response.body?.string()
 
             if (response.isSuccessful) {
-                // Process the response here
-                // responseBody contains the response from the API
                 val jsonResponse = JSONObject(responseBody)
                 val choicesArray = jsonResponse.getJSONArray("choices")
-
 
                 if (choicesArray.length() > 0) {
                     val firstChoice = choicesArray.getJSONObject(0)
                     val messageJsonString = firstChoice.getString("message").trim()
 
-                    val newMessage = gson.fromJson(messageJsonString, Message::class.java)
-                    chatItemList.add(newMessage)
+                    onSuccess(messageJsonString)
                 }
             } else {
-                // Handle API call failure
-                println("failed")
+                error("Failed to get ai text response")
             }
         }
     })
