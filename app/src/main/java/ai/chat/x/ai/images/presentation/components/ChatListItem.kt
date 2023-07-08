@@ -6,6 +6,7 @@ import ai.chat.x.ai.images.data.model.ChatItem
 import ai.chat.x.ai.images.data.model.ImageChatItem
 import ai.chat.x.ai.images.data.model.LoaderChatItem
 import ai.chat.x.ai.images.data.model.MessageChatItem
+import ai.chat.x.ai.images.domain.StringHelper
 import ai.chat.x.ai.images.utils.Logger
 import android.widget.Toast
 import androidx.compose.foundation.layout.Box
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -44,22 +46,26 @@ val CardEndMargin = 64.dp
 val CardPadding = 16.dp
 
 @Composable
-fun ChatListItem(chatItem: ChatItem, chatBoxTextFieldValue: MutableState<TextFieldValue>) {
+fun ChatListItem(
+    chatItem: ChatItem,
+    chatBoxTextFieldValue: MutableState<TextFieldValue>,
+    replyChatItem: MutableState<ChatItem?>
+) {
     when (chatItem) {
         is MessageChatItem -> {
             when (chatItem.role) {
                 "user" -> {
-                    UserMessageChatItemView(chatItem, chatBoxTextFieldValue)
+                    UserMessageChatItemView(chatItem, chatBoxTextFieldValue, replyChatItem)
                 }
                 "assistant" -> {
-                    AssistantMessageChatItemView(chatItem)
+                    AssistantMessageChatItemView(chatItem, chatBoxTextFieldValue, replyChatItem)
                 }
             }
         }
         is ImageChatItem -> {
             when (chatItem.role) {
                 "user" -> {
-                    UserMessageChatItemView(chatItem, chatBoxTextFieldValue)
+                    UserMessageChatItemView(chatItem, chatBoxTextFieldValue, replyChatItem)
                 }
                 "assistant" -> {
                     AssistantImageChatItemView(chatItem)
@@ -79,7 +85,8 @@ fun ChatListItem(chatItem: ChatItem, chatBoxTextFieldValue: MutableState<TextFie
 @Composable
 fun UserMessageChatItemView(
     chatItem: ChatItem,
-    chatBoxTextFieldValue: MutableState<TextFieldValue>
+    chatBoxTextFieldValue: MutableState<TextFieldValue>,
+    replyChatItem: MutableState<ChatItem?>
 ) {
     val context = LocalContext.current
     var expanded = remember { mutableStateOf(false) }
@@ -120,7 +127,7 @@ fun UserMessageChatItemView(
                                 if(ClipboardHandler.copyTextToClipboard(context, chatItem.content))
                                     Toast.makeText(
                                         context,
-                                        "Copied: " + chatItem.content.substring(0, 20),
+                                        "Copied: ${StringHelper.getTruncatedString(chatItem.content, 20)}",
                                         Toast.LENGTH_SHORT
                                     ).show()
 
@@ -145,7 +152,10 @@ fun UserMessageChatItemView(
                         )
                         DropdownMenuItem(
                             text = { Text(text = "reply") },
-                            onClick = { /*TODO: Edit message */ },
+                            onClick = {
+                                replyChatItem.value = chatItem
+                                expanded.value = false
+                            },
                             leadingIcon = {Icon(imageVector = ImageVector.vectorResource(R.drawable.reply_svgrepo_com), contentDescription = "Copy")}
                         )
                     }
@@ -156,23 +166,83 @@ fun UserMessageChatItemView(
 }
 
 @Composable
-fun AssistantMessageChatItemView(chatItem: MessageChatItem) {
+fun AssistantMessageChatItemView(
+    chatItem: MessageChatItem,
+    chatBoxTextFieldValue: MutableState<TextFieldValue>,
+    replyChatItem: MutableState<ChatItem?>
+) {
+    val context = LocalContext.current
+    var expanded = remember { mutableStateOf(false) }
+
     Column(
         modifier = Modifier
             .fillMaxWidth(),
         horizontalAlignment = Alignment.Start
     ) {
         Card(
-            modifier = Modifier
-                .padding(8.dp, 4.dp, CardEndMargin, 4.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.secondary,
-            ),
+            modifier = Modifier.padding(8.dp, 4.dp, CardEndMargin, 4.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondary),
         ) {
-            Text(
-                text = chatItem.content,
-                modifier = Modifier.padding(8.dp)
-            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+            ) {
+                Text(
+                    text = chatItem.content,
+                    modifier = Modifier.padding(8.dp)
+                )
+
+                IconButton(
+                    onClick = { expanded.value = true },
+                    modifier = Modifier.align(Alignment.TopEnd)
+                ) {
+                    Icon(Icons.Default.MoreVert, contentDescription = "Options")
+
+                    DropdownMenu(
+                        expanded = expanded.value,
+                        onDismissRequest = { expanded.value = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(text = "Copy") },
+                            leadingIcon = {Icon(imageVector = ImageVector.vectorResource(R.drawable.copy_svgrepo_com), contentDescription = "Copy")},
+                            onClick = {
+                                if(ClipboardHandler.copyTextToClipboard(context, chatItem.content))
+                                    Toast.makeText(
+                                        context,
+                                        "Copied: ${StringHelper.getTruncatedString(chatItem.content, 20)}",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+
+                                expanded.value = false
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(text = "Edit") },
+
+                            onClick = {
+                                // TODO: Move keyboard cursor to end of pasted text.
+                                chatBoxTextFieldValue.value = TextFieldValue(chatItem.content)
+
+                                expanded.value = false
+                            },
+                            leadingIcon = {Icon(imageVector = ImageVector.vectorResource(R.drawable.edit_4_svgrepo_com), contentDescription = "Copy")}
+                        )
+                        DropdownMenuItem(
+                            text = { Text(text = "share") },
+                            onClick = { /*TODO: Share message as text */ },
+                            leadingIcon = {Icon(imageVector = ImageVector.vectorResource(R.drawable.share_2_svgrepo_com), contentDescription = "Copy")}
+                        )
+                        DropdownMenuItem(
+                            text = { Text(text = "reply") },
+                            onClick = {
+                                replyChatItem.value = chatItem
+                                expanded.value = false
+                            },
+                            leadingIcon = {Icon(imageVector = ImageVector.vectorResource(R.drawable.reply_svgrepo_com), contentDescription = "Copy")}
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -266,5 +336,41 @@ fun LoaderChatItemItemView(chatItem: LoaderChatItem){
     ) {
         CircularProgressIndicator(modifier = Modifier.size(32.dp))
         Text(text = chatItem.content)
+    }
+}
+
+/*
+ * Replies ChatItems
+ */
+@Composable
+fun UserMessageChatItemReplyView(
+    replyChatItemMutableState: MutableState<ChatItem?>,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth(),
+        horizontalAlignment = Alignment.End
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+            ) {
+                Text(
+                    text = replyChatItemMutableState.value?.content ?: "",
+                    modifier = Modifier.padding(8.dp)
+                )
+
+                IconButton(
+                    onClick = { replyChatItemMutableState.value = null },
+                    modifier = Modifier.align(Alignment.TopEnd)
+                ) {
+                    Icon(Icons.Default.Clear, contentDescription = "Options")
+                }
+            }
+        }
     }
 }
