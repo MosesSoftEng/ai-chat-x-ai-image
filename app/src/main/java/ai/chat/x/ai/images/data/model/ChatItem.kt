@@ -5,13 +5,19 @@ sealed interface ChatItem {
     val content: String
 }
 
-data class Message(
+// TODO: Rename message to text.
+data class MessageChatItem(
     override val role: String,
     override val content: String,
 ) : ChatItem
 
-data class Image(
+data class ImageChatItem(
     override val role: String,
     override val content: String,
     val imagePath: String
+) : ChatItem
+
+data class LoaderChatItem(
+    override val role: String,
+    override val content: String,
 ) : ChatItem
