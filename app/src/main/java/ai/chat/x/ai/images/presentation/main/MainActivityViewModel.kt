@@ -1,6 +1,7 @@
 package ai.chat.x.ai.images.presentation.main
 
 import ai.chat.x.ai.images.data.model.ChatItem
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 
@@ -12,6 +13,20 @@ import androidx.lifecycle.ViewModel
  * This ViewModel plays a crucial role in maintaining the state and coordinating the flow of data in the main screen.
  */
 class MainActivityViewModel: ViewModel() {
-    val replyChatItemLiveData = MutableLiveData<ChatItem>()
+    // Property
+    private val _replyChatItemLiveData: MutableLiveData<ChatItem> = MutableLiveData<ChatItem>()
 
+    // Constructor.
+    init {
+        _replyChatItemLiveData.value = null
+    }
+
+    // Getter.
+    val replyChatItemLiveData: LiveData<ChatItem>
+        get() = _replyChatItemLiveData
+
+    // Setter.
+    fun updateReplyChatItem(chatItem: ChatItem) {
+        _replyChatItemLiveData.value = chatItem
+    }
 }
