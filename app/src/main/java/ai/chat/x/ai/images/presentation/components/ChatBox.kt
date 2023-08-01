@@ -85,9 +85,23 @@ fun ChatBox(
                     .weight(1f)
                     .wrapContentHeight(),
             ) {
+                /*
+                 * Reply UI.
+                 */
                 if (replyChatItemMutableState.value != null) {
-                    UserMessageChatItemReplyView(replyChatItemMutableState)
-                    Spacer(modifier = Modifier.height(8.dp))
+                    val chatItem: ChatItem = replyChatItemMutableState.value!!
+
+                    when (chatItem) {
+                        is MessageChatItem -> {
+                            MessageChatItemReplyView(replyChatItemMutableState)
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+                        is ImageChatItem -> {
+                            ImageChatItemReplyView(replyChatItemMutableState)
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+                        else -> {}
+                    }
                 }
 
                 TextField(
@@ -145,8 +159,10 @@ private fun handleSendClick(
     onFinish: () -> Unit
 ) {
     if (isTextMode) {
-        // Handle reply
-        chatItemList.add(MessageChatItem(role = "user", content = appendReplyContent(userRequestText, replyChatItemMutableState)))
+        chatItemList.add(MessageChatItem(
+            role = "user",
+            content = appendReplyContent(userRequestText, replyChatItemMutableState))
+        )
 
         // TODO: Create text handler.
         getAiText(
@@ -162,20 +178,40 @@ private fun handleSendClick(
             }
         )
     } else {
-        chatItemList.add(ImageChatItem(role = "user", content = userRequestText, imagePath = ""))
-
-        AiImageHandler.getAIImage(
-            applicationContext,
-            chatItemList,
-            onSuccess  = { imagePath ->
-                onFinish()
-                chatItemList.add(ImageChatItem(role = "assistant", content = userRequestText, imagePath = imagePath))
-            },
-            onError = { errorMessage ->
-                // TODO: Handle request error, retry snackbar?
-                onFinish()
-            }
+        chatItemList.add(ImageChatItem(
+            role = "user",
+            content = appendReplyContent(userRequestText, replyChatItemMutableState),
+            imagePath = "")
         )
+
+        if(replyChatItemMutableState.value == null) {
+            AiImageHandler.createAiImage(
+                applicationContext,
+                chatItemList,
+                onSuccess  = { imagePath ->
+                    onFinish()
+                    chatItemList.add(ImageChatItem(role = "assistant", content = userRequestText, imagePath = imagePath))
+                },
+                onError = { errorMessage ->
+                    // TODO: Handle request error, retry snackbar?
+                    onFinish()
+                }
+            )
+        } else {
+            // Image variation.
+            AiImageHandler.createAiImageVariation(
+                applicationContext,
+                chatItemList,
+                onSuccess  = { imagePath: String ->
+                    onFinish()
+                    chatItemList.add(ImageChatItem(role = "assistant", content = userRequestText, imagePath = imagePath))
+                },
+                onError = { errorMessage: String ->
+                    // TODO: Handle request error, retry snackbar?
+                    onFinish()
+                }
+            )
+        }
     }
 }
 
@@ -186,5 +222,3 @@ fun appendReplyContent(userRequestText: String, replyChatItem: MutableState<Chat
         userRequestText
     }
 }
-
-

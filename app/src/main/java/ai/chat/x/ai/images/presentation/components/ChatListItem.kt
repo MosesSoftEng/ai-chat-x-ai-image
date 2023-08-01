@@ -49,7 +49,7 @@ val CardPadding = 16.dp
 fun ChatListItem(
     chatItem: ChatItem,
     chatBoxTextFieldValue: MutableState<TextFieldValue>,
-    replyChatItem: MutableState<ChatItem?>
+    replyChatItem: MutableState<ChatItem?> // TODO: rename to replyChatItemMutableState
 ) {
     when (chatItem) {
         is MessageChatItem -> {
@@ -68,7 +68,7 @@ fun ChatListItem(
                     UserMessageChatItemView(chatItem, chatBoxTextFieldValue, replyChatItem)
                 }
                 "assistant" -> {
-                    AssistantImageChatItemView(chatItem)
+                    AssistantImageChatItemView(chatItem, replyChatItem)
                 }
             }
         }
@@ -154,6 +154,8 @@ fun UserMessageChatItemView(
                             text = { Text(text = "reply") },
                             onClick = {
                                 replyChatItem.value = chatItem
+
+
                                 expanded.value = false
                             },
                             leadingIcon = {Icon(imageVector = ImageVector.vectorResource(R.drawable.reply_svgrepo_com), contentDescription = "Copy")}
@@ -251,7 +253,7 @@ fun AssistantMessageChatItemView(
  * Image ChatItem
  */
 @Composable
-fun AssistantImageChatItemView(imageChatItem: ImageChatItem) {
+fun AssistantImageChatItemView(imageChatItem: ImageChatItem, replyChatItem: MutableState<ChatItem?>) {
     val context = LocalContext.current
     var expanded = remember { mutableStateOf(false) }
 
@@ -312,8 +314,11 @@ fun AssistantImageChatItemView(imageChatItem: ImageChatItem) {
                             leadingIcon = {Icon(imageVector = ImageVector.vectorResource(R.drawable.share_2_svgrepo_com), contentDescription = "Copy")}
                         )
                         DropdownMenuItem(
-                            text = { Text(text = "reply") },
-                            onClick = { /*TODO: Edit image*/ },
+                            text = { Text(text = "variation") },
+                            onClick = {
+                                replyChatItem.value = imageChatItem
+                                expanded.value = false
+                            },
                             leadingIcon = {Icon(imageVector = ImageVector.vectorResource(R.drawable.reply_svgrepo_com), contentDescription = "Copy")}
                         )
                     }
@@ -343,7 +348,7 @@ fun LoaderChatItemItemView(chatItem: LoaderChatItem){
  * Replies ChatItems
  */
 @Composable
-fun UserMessageChatItemReplyView(
+fun MessageChatItemReplyView(
     replyChatItemMutableState: MutableState<ChatItem?>,
 ) {
     Column(
@@ -363,6 +368,52 @@ fun UserMessageChatItemReplyView(
                     text = replyChatItemMutableState.value?.content ?: "",
                     modifier = Modifier.padding(8.dp)
                 )
+
+                IconButton(
+                    onClick = { replyChatItemMutableState.value = null },
+                    modifier = Modifier.align(Alignment.TopEnd)
+                ) {
+                    Icon(Icons.Default.Clear, contentDescription = "Options")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ImageChatItemReplyView(
+    replyChatItemMutableState: MutableState<ChatItem?>,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth(),
+        horizontalAlignment = Alignment.End
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+            ) {
+                val imageChatItem = replyChatItemMutableState.value as ImageChatItem
+
+                if (imageChatItem.imagePath.isNotBlank()) {
+                    // Display the Image.
+                    AsyncImage(
+                        model = File(imageChatItem.imagePath),
+                        contentDescription = imageChatItem.content,
+                        contentScale = ContentScale.FillBounds,
+                        modifier = Modifier.aspectRatio(1f)
+                    )
+                } else {
+                    // Display a Text.
+                    Text(
+                        text = imageChatItem.content,
+                        modifier = Modifier.padding(8.dp)
+                    )
+                }
 
                 IconButton(
                     onClick = { replyChatItemMutableState.value = null },

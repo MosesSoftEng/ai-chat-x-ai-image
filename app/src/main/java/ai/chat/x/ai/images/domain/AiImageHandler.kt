@@ -2,7 +2,8 @@ package ai.chat.x.ai.images.domain
 
 import ai.chat.x.ai.images.config.KEYS
 import ai.chat.x.ai.images.data.model.ChatItem
-import ai.chat.x.ai.images.data.repository.AiImageRepo
+import ai.chat.x.ai.images.data.model.ImageChatItem
+import ai.chat.x.ai.images.data.remote.AiImageApi
 import ai.chat.x.ai.images.utils.Logger
 import android.content.Context
 import android.graphics.Bitmap
@@ -22,9 +23,12 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-// TODO: Rename classname to AiImageHandler.
+
+/**
+ * Utility class to handle AI image generation.
+ */
 object AiImageHandler {
-    fun getAIImage(
+    fun createAiImage(
         applicationContext: Context,
         chatItemList: MutableList<ChatItem>,
         onSuccess: (String) -> Unit,
@@ -33,12 +37,43 @@ object AiImageHandler {
     {
         val latestMessage: ChatItem = ChatListHandler.getLatestMessage(chatItemList) ?: return
 
-        AiImageRepo.makeAiImageRequest(
+        AiImageApi.create(
             KEYS.OPENAI_API,
             latestMessage.content,
-            1,
-            "256x256",
+            1, // TODO: Add to settings.
+            "256x256", // TODO: Add to settings.
             onSuccess = { imagesDataList  ->
+                processAiImages(
+                    applicationContext,
+                    imagesDataList,
+                    latestMessage.content,
+                    onSuccess = { imagePath ->
+                        onSuccess(imagePath)
+                    },
+                    onError = { response ->
+                        Logger.d(response)
+                    }
+                );
+            },
+            onError = { response ->
+                Logger.d(response)
+            }
+        )
+
+        // TODO: Handle fail situation.
+        // TODO: Add ai image response to chatItemList.
+        // TODO: Save image locally.
+    }
+
+    fun createAiImageVariation(applicationContext: Context, chatItemList: MutableList<ChatItem>, onSuccess: (String) -> Unit, onError: (String) -> Unit) {
+        val latestMessage: ImageChatItem = (ChatListHandler.getLatestMessage(chatItemList) as ImageChatItem) ?: return
+
+        AiImageApi.createImageVariation(
+            KEYS.OPENAI_API,
+            latestMessage.imagePath,
+            1, // TODO: Add to settings.
+            "256x256", // TODO: Add to settings.
+            onSuccess = { imagesDataList: JSONArray  ->
                 processAiImages(
                     applicationContext,
                     imagesDataList,
@@ -55,13 +90,6 @@ object AiImageHandler {
                 Logger.d(response)
             }
         )
-
-        // TODO: Handle fail situation.
-
-        // TODO: Add ai image response to chatItemList.
-
-
-        // TODO: Save image locally.
     }
 
     private fun processAiImages(
@@ -94,7 +122,6 @@ object AiImageHandler {
             )
         }
     }
-
 
     private fun saveImageFromUrl(
         context: Context,

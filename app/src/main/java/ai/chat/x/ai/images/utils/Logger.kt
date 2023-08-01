@@ -2,7 +2,9 @@ package ai.chat.x.ai.images.utils
 
 import ai.chat.x.ai.images.config.APP_NAME_ID
 import ai.chat.x.ai.images.config.SHOW_LOGS
+import android.content.Context
 import android.util.Log
+import android.widget.Toast
 
 object Logger {
     fun d(vararg messages: Any) {
